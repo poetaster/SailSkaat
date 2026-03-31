@@ -1,4 +1,12 @@
 Name:       harbour-sailskaat
+# >> macros
+%define _binary_payload w2.xzdio
+# << macros
+
+%{!?qtc_qmake:%define qtc_qmake %qmake}
+%{!?qtc_qmake5:%define qtc_qmake5 %qmake5}
+%{!?qtc_make:%define qtc_make make}
+%{?qtc_builddir:%define _builddir %qtc_builddir}
 
 Summary:    Skaat Game
 Version:    0.1.0
@@ -18,6 +26,24 @@ BuildRequires:  desktop-file-utils
 %description
 Three player Skaat. You Vs. Walt & Mary. Based on a svelte app from https://github.com/nikku/skaat-app
 
+%if "%{?vendor}" == "chum"
+PackageName: SailSkaat
+Type: desktop-application
+Categories:
+ - Game
+PackagerName: Mark Washeim
+Custom:
+ - RepoType: github
+ - Repo: https://github.com/poetaster/SailSkaat
+Icon: https://raw.githubusercontent.com/poetaster/SailSkaat/main/icons/172x172/harbour-sailskaat.png
+Screenshots:
+ - https://raw.githubusercontent.com/poetaster/SailSkaat/main/Screenshot_20260331_175049_001.png
+ - https://raw.githubusercontent.com/poetaster/SailSkaat/main/Screenshot_20260331_175044_001.png
+ - https://raw.githubusercontent.com/poetaster/SailSkaat/main/Screenshot_20260331_175010_001.png
+Url:
+  Homepage: https://github.com/poetaster/SailSkaat
+  Bugtracker: https://github.com/poetaster/SailSkaat/issues
+%endif
 
 %prep
 %setup -q -n %{name}-%{version}
