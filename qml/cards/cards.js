@@ -7,8 +7,12 @@ function rank(id) { return id % 13 + 1 }
 function suit(id) { return Math.floor(id / 13) }
 // Rank when aces are high.
 function high(id) { var r = rank(id); return r === 1 ? 14 : r }
-function rankText(id) { return ranks[id % 13] }
-function suitText(id) { return suits[suit(id)] }
+// A card id is valid only in 0..51 (suit * 13 + rank). Anything else
+// (e.g. -1 for a face-down card, or a transient NaN during a layout
+// change) must not leak an undefined rank/suit into a bound text.
+function isValidId(id) { return typeof id === "number" && id === Math.floor(id) && id >= 0 && id < 52 }
+function rankText(id) { return isValidId(id) ? ranks[id % 13] : "" }
+function suitText(id) { return isValidId(id) ? suits[suit(id)] : "" }
 function isRed(id) { var s = suit(id); return s === 1 || s === 2 }
 function isFace(id) { return id >= 0 && rank(id) > 10 }
 function name(id) { return rankText(id) + suitText(id) }

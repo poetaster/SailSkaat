@@ -169,9 +169,7 @@ Page {
         return out
     }
 
-    // ------------------------------------------------------------------
-    // Engine drivers.
-    // ------------------------------------------------------------------
+    // Engine functions
 
     function newGame() {
         page.selected = []
@@ -277,7 +275,9 @@ Page {
             }
         }
         page.declaredGame = (st.game && st.game.suit) ? st.game : null
-        page.declarer = (st.player === undefined) ? -1 : st.player
+        // state.player is null (nobody declared, e.g. all-pass) or a player
+        // index once someone declares; both must map to "no declarer" (-1).
+        page.declarer = (st.player == null) ? -1 : st.player
         if (page.finished)
             page.result = page.engine.getResult()
         page.selected = []
@@ -741,8 +741,11 @@ Page {
                 Repeater {
                     model: page.hand.length
                     TableCard {
-                        readonly property string cardName: page.hand[index]
-                        readonly property int cid: Skaat.toCardId(cardName)
+                        readonly property string cardName: (index < page.hand.length) ? page.hand[index] : ""
+                        // cardName can be undefined for one frame while the hand
+                        // shrinks and an out-of-range index is still bound; keep
+                        // toCardId away from it (it would throw on charAt).
+                        readonly property int cid: (cardName && cardName.length >= 2) ? Skaat.toCardId(cardName) : -1
                         place: page.handPlace(index)
                         cardId: cid
                         faceDown: false
