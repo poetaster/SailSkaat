@@ -51,10 +51,14 @@ Page {
     // Table sizing.
     readonly property real margin: Theme.horizontalPageMargin
     readonly property real pad: Theme.paddingMedium
+    // Layout is sized off the largest hand dealt this game (not the live
+    // hand size), so cards keep a constant size as the hand shrinks during
+    // play. The live handCount is still used to centre the fan.
     readonly property int handCount: Math.max(1, page.hand.length)
+    property int maxHand: 1
     readonly property real spread: 0.5
     readonly property real cardWidth: Math.floor(
-        (page.width - 2 * page.margin) / (1 + (page.handCount - 1) * page.spread))
+        (page.width - 2 * page.margin) / (1 + (Math.max(1, page.maxHand) - 1) * page.spread))
     readonly property real cardHeight: Math.round(page.cardWidth * 1.42)
     readonly property real botCardW: Math.round(page.cardWidth * 0.7)
     readonly property real botCardH: Math.round(page.botCardW * 1.42)
@@ -152,6 +156,7 @@ Page {
         page.errorText = ""
         page.result = null
         page.trick = []
+        page.maxHand = 1
         page.lastTrick = null
         page.lastTrickKey = ""
         page.settling = false
@@ -202,15 +207,34 @@ Page {
         return out.join(",")
     }
 
+    // Display order for the human's hand: jacks first, then the rest; each
+    // group ordered by suit (clubs, diamonds, hearts, spades).
+    function sortedHand(cards) {
+        var order = { '♣': 0, '♦': 1, '♥': 2, '♠': 3 }
+        function key(c) {
+            var isJack = (c.charAt(1) === 'J') ? 0 : 1
+            return isJack * 100 + (order[c.charAt(0)] || 0)
+        }
+        var out = cards.slice()
+        out.sort(function (a, b) { return key(a) - key(b) })
+        return out
+    }
+
     function refresh() {
         var st = page.engine ? page.engine.state : {}
         if (st.hands) {
-            page.hand = st.hands[0].slice()
+            page.hand = page.sortedHand(st.hands[0])
             page.hands = [st.hands[0].slice(), st.hands[1].slice(), st.hands[2].slice()]
         } else {
             page.hand = []
             page.hands = [[], [], []]
         }
+        // Keep cards a constant size: track the largest hand seen this game.
+        var m = 0
+        for (var i = 0; i < page.hands.length; ++i)
+            m = Math.max(m, page.hands[i].length)
+        if (m > page.maxHand)
+            page.maxHand = m
         page.skat = st.skat ? st.skat.slice() : []
         page.trick = st.currentTrick ? st.currentTrick.slice() : []
         // A trick just completed when the in-progress trick is empty but a new
@@ -242,7 +266,22 @@ Page {
         var pts = page.result.points || []
         var text = []
         for (var i = 0; i < 3; ++i) {
-            var p = pts[i] || 0
+            // result.points[i] holds that player's [label, value] change
+            // entries (e.g. [[ "points", -48 ]]); sum the numeric values.
+            // Tolerate a bare number or an empty slot as well.
+            var p = 0
+            var slot = pts[i] || []
+            if (typeof slot === "number") {
+                p = slot
+            } else {
+                for (var j = 0; j < slot.length; ++j) {
+                    var e = slot[j]
+                    if (typeof e === "number")
+                        p += e
+                    else if (e && typeof e[1] === "number")
+                        p += e[1]
+                }
+            }
             s[i] += p
             text.push(page.playerName(i) + " " + (p >= 0 ? "+" : "−") + Math.abs(p))
         }
@@ -673,6 +712,19 @@ Page {
                         onClicked: page.onCardTapped(cardName)
                     }
                 }
+            }
+
+            // The human's running total, mirroring the bot seats. Sits just
+            // above the (wide, centred) hand fan so it never overlaps a card.
+            Label {
+                id: youLabel
+                anchors.left: parent.left
+                anchors.bottom: handRow.top
+                anchors.leftMargin: page.margin
+                anchors.bottomMargin: page.pad
+                text: qsTr("You") + "  " + page.matchScore[0]
+                font.pixelSize: Theme.fontSizeSmall
+                color: Cards.playerColor(0)
             }
         }
     }
