@@ -120,8 +120,12 @@ Page {
         var who = page.actor === 0
             ? qsTr("You ")
             : (page.actor === null ? "" : page.playerName(page.actor) + " ")
-        if (page.step === "ask-bid")
-            return who + (page.actor === 0 ? qsTr("must bid: pass or name a bid.") : qsTr("is weighing the cards…"))
+        if (page.step === "ask-bid") {
+            var cb = page.currentBidInfo()
+            if (page.actor === 0)
+                return (cb ? qsTr("Current bid ") + cb + ". " : "") + qsTr("Pass or bid higher.")
+            return who + qsTr("is weighing the cards") + (cb ? " (" + cb + ")" : "") + "…"
+        }
         if (page.step === "ask-ack")
             return who + (page.actor === 0 ? qsTr("may contra or pass.") : qsTr("thinks about a contra…"))
         if (page.step === "ask-declare")
@@ -133,6 +137,26 @@ Page {
         if (page.step === "ask-card")
             return who + (page.actor === 0 ? qsTr("tap a card to play.") : qsTr("is choosing a card…"))
         return ""
+    }
+
+    // Human-readable current bid, e.g. "20 by Bot 1" ("" if nobody has bid yet).
+    function currentBidInfo() {
+        var b = (page.engine && page.engine.state.bidding) ? page.engine.state.bidding : null
+        if (!b || !b.bid)
+            return ""
+        var s = String(b.bid)
+        if (b.leader != null)
+            s += " " + qsTr("by ") + page.playerName(b.leader)
+        return s
+    }
+
+    // Prominent current-bid indicator; shown only once a bot has actually bid.
+    function bidChipText() {
+        var b = (page.engine && page.engine.state.bidding) ? page.engine.state.bidding : null
+        if (!b || !b.bid)
+            return ""
+        var who = (b.leader != null) ? "  " + page.playerName(b.leader) : ""
+        return qsTr("Current bid ") + b.bid + who
     }
 
     // Bids allowed now: everything above the current bid.
@@ -268,7 +292,6 @@ Page {
         for (var i = 0; i < 3; ++i) {
             // result.points[i] holds that player's [label, value] change
             // entries (e.g. [[ "points", -48 ]]); sum the numeric values.
-            // Tolerate a bare number or an empty slot as well.
             var p = 0
             var slot = pts[i] || []
             if (typeof slot === "number") {
@@ -310,8 +333,7 @@ Page {
         return Skaat.Util.isValidTrickCard(card, page.trick, page.hand, page.declaredGame.suit)
     }
 
-    // Card placements, built in JS: an inline object literal in binding
-    // position would be parsed as an inline component.
+    // Card placements, built in JS:
     function botPlace(player, index) {
         var n = page.hands[player].length
         var i = (player === 1) ? index : (n - 1 - index)
@@ -388,9 +410,7 @@ Page {
         }
     }
 
-    // ------------------------------------------------------------------
     // Table.
-    // ------------------------------------------------------------------
 
     SilicaFlickable {
         id: flick
@@ -488,7 +508,7 @@ Page {
                 }
             }
 
-            readonly property real botRowH: page.botCardH + 2 * Theme.paddingSmall
+            readonly property real botRowH: page.botCardH + Theme.fontSizeSmall + 2 * Theme.paddingSmall
 
             // The skat.
             Item {
@@ -537,8 +557,8 @@ Page {
                         place: page.trickPlace(index)
                         cardId: Skaat.toCardId(cardName)
                         faceDown: false
-                        width: page.cardWidth
-                        height: page.cardHeight
+                        width: page.cardWidth * 1.3
+                        height: page.cardHeight * 1.3
                         enabled: false
                     }
                 }
@@ -548,9 +568,20 @@ Page {
             Column {
                 id: statusBlock
                 x: page.margin
-                y: trickRow.y + trickRow.height + page.pad
+                y: trickRow.y + trickRow.height + page.pad * 2
                 width: page.width - 2 * page.margin
                 spacing: page.pad
+
+                Label {
+                    id: bidChip
+                    visible: (page.step === "ask-bid" || page.step === "ask-ack") && page.bidChipText() !== ""
+                    width: parent.width
+                    text: page.bidChipText()
+                    horizontalAlignment: Text.AlignHCenter
+                    font.pixelSize: Theme.fontSizeLarge
+                    font.bold: true
+                    color: Theme.highlightColor
+                }
 
                 Label {
                     id: statusLabel
@@ -573,12 +604,24 @@ Page {
                             text: qsTr("Pass")
                             onClicked: page.doPass()
                         }
-                    }
-                    Repeater {
-                        model: page.actor === 0 && page.step === "ask-bid" ? page.bidList : []
                         Button {
-                            text: String(modelData)
-                            onClicked: page.doBid(modelData)
+                            id: bidBtn
+                            text: qsTr("Bid")
+                            onClicked: bidMenu.visible = true
+                        }
+                    }
+                    ComboBox {
+                        visible: false
+                        width: parent.width
+                        id: bidMenu
+                        menu: ContextMenu {
+                            Repeater {
+                                model: page.bidList
+                                MenuItem {
+                                    text: String(modelData)
+                                    onClicked: page.doBid(modelData)
+                                }
+                            }
                         }
                     }
 
@@ -603,7 +646,7 @@ Page {
                         visible: page.actor === 0 && page.step === "ask-declare"
                         spacing: Theme.paddingSmall
                         Button {
-                            text: qsTr("Take skat")
+                            text: qsTr("Put skat")
                             onClicked: page.takeSkat()
                         }
                         Button {
@@ -669,7 +712,7 @@ Page {
                               && page.playing
                               && page.declaredGame.suit !== Skaat.Constants.Ramsch
                         Button {
-                            text: qsTr("Give up")
+                            text: qsTr("Resign")
                             onClicked: page.giveUp()
                         }
                     }
@@ -752,7 +795,7 @@ Page {
     // can be seen before the next trick begins.
     Timer {
         id: settleTimer
-        interval: 2000
+        interval: 2800
         repeat: false
         onTriggered: page.settling = false
     }
