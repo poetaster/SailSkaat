@@ -9,7 +9,7 @@ Name:       harbour-sailskaat
 %{?qtc_builddir:%define _builddir %qtc_builddir}
 
 Summary:    Skaat Game
-Version:    0.1.2
+Version:    0.2.0
 Release:    1
 License:    GPLv3
 BuildArch:  noarch
@@ -24,7 +24,8 @@ BuildRequires:  pkgconfig(Qt5Quick)
 BuildRequires:  desktop-file-utils
 
 %description
-Three player Skaat. You Vs. Walt & Mary. Based on a svelte app from https://github.com/nikku/skaat-app
+Three player Skaat. You Vs. two bots. Native QML game with the Skat rules
+engine from https://github.com/nikku/skaat embedded as a QML JavaScript library.
 
 %if "%{?vendor}" == "chum"
 PackageName: SailSkaat

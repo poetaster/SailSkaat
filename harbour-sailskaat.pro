@@ -17,10 +17,15 @@ CONFIG += sailfishapp_qml
 DISTFILES += qml/harbour-sailskaat.qml \
     qml/cover/CoverPage.qml \
     qml/cover/*.svg \
-    qml/pages/FirstPage.qml \
-    qml/html/*.html \
-    qml/html/*.css \
-    qml/html/*.js\
+    qml/cover/harbour-sailskaat.png \
+    qml/pages/GamePage.qml \
+    qml/pages/AboutPage.qml \
+    qml/components/DashedSlot.qml \
+    qml/cards/PlayingCard.qml \
+    qml/cards/TableCard.qml \
+    qml/cards/cards.js \
+    qml/js/skaat.js \
+    tests/skaat-selftest.js \
     rpm/harbour-sailskaat.changes.in \
     rpm/harbour-sailskaat.changes.run.in \
     rpm/harbour-sailskaat.spec \
@@ -31,11 +36,5 @@ DISTFILES += qml/harbour-sailskaat.qml \
 # to disable building translations every time, comment out the
 # following CONFIG line
 #CONFIG += sailfishapp_i18n
-
-# German translation is enabled as an example. If you aren't
-# planning to localize your app, remember to comment out the
-# following TRANSLATIONS line. And also do not forget to
-# modify the localized app name in the the .desktop file.
-#TRANSLATIONS += translations/harbour-sailskaat-de.ts
 
 SAILFISHAPP_ICONS = 86x86 108x108 128x128 172x172
