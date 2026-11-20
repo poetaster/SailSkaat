@@ -34,14 +34,14 @@ PlayingCard {
         enabled: card.ready
         SequentialAnimation {
             PauseAnimation { duration: card.moveDelay }
-            NumberAnimation { duration: 320; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: 420; easing.type: Easing.OutCubic }
         }
     }
     Behavior on y {
         enabled: card.ready
         SequentialAnimation {
             PauseAnimation { duration: card.moveDelay }
-            NumberAnimation { duration: 320; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: 420; easing.type: Easing.OutCubic }
         }
     }
     Behavior on opacity { FadeAnimation { } }
@@ -49,7 +49,7 @@ PlayingCard {
         enabled: card.ready
         SequentialAnimation {
             PauseAnimation { duration: card.moveDelay }
-            NumberAnimation { duration: 320; easing.type: Easing.OutCubic }
+            NumberAnimation { duration: 420; easing.type: Easing.OutCubic }
         }
     }
 }

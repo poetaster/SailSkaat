@@ -90,6 +90,17 @@ Page {
         return String(suit)
     }
 
+    // Declared-game suffix for the score labels, e.g. "· ♥ Hand +3 jacks"
+    // for the declarer and "· defender" for the other two. Empty before a
+    // game has been declared.
+    function scoreSuffix(player) {
+        if (!page.declaredGame)
+            return ""
+        if (page.declarer === player)
+            return "  ·  " + page.gameText()
+        return "  ·  " + qsTr("defender")
+    }
+
     function gameText() {
         if (!page.declaredGame)
             return ""
@@ -446,10 +457,23 @@ Page {
         id: flick
         anchors.fill: parent
         flickableDirection: Flickable.VerticalFlick
-        boundsBehavior: Flickable.StopAtBounds
+        //boundsBehavior: Flickable.StopAtBounds
         contentWidth: page.width
         contentHeight: Math.max(page.height, root.contentH)
-
+        PullDownMenu {
+            MenuItem {
+                text: qsTr("New game")
+                onClicked: page.newGame()
+            }
+            MenuItem {
+                text: qsTr("Rules")
+                onClicked: pageStack.push(Qt.resolvedUrl("RulesPage.qml"))
+            }
+            MenuItem {
+                text: qsTr("About")
+                onClicked: pageStack.push(Qt.resolvedUrl("AboutPage.qml"))
+            }
+        }
         Item {
             id: root
             width: page.width
@@ -470,7 +494,7 @@ Page {
                 Label {
                     anchors.left: parent.left
                     anchors.bottom: parent.bottom
-                    text: qsTr("Bot 1") + "  " + page.matchScore[1]
+                    text: qsTr("Bot 1") + "  " + page.matchScore[1] + page.scoreSuffix(1)
                     font.pixelSize: Theme.fontSizeSmall
                     color: Cards.playerColor(1)
                 }
@@ -499,7 +523,7 @@ Page {
                 Label {
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
-                    text: qsTr("Bot 2") + "  " + page.matchScore[2]
+                    text: qsTr("Bot 2") + "  " + page.matchScore[2] + page.scoreSuffix(2)
                     font.pixelSize: Theme.fontSizeSmall
                     color: Cards.playerColor(2)
                 }
@@ -728,7 +752,7 @@ Page {
                 anchors.bottom: handRow.top
                 anchors.leftMargin: page.margin
                 anchors.bottomMargin: page.pad
-                text: qsTr("You") + "  " + page.matchScore[0]
+                text: qsTr("You") + "  " + page.matchScore[0] + page.scoreSuffix(0)
                 font.pixelSize: Theme.fontSizeSmall
                 color: Cards.playerColor(0)
             }
@@ -791,14 +815,5 @@ Page {
 
     Component.onCompleted: page.newGame()
 
-    PullDownMenu {
-        MenuItem {
-            text: qsTr("New game")
-            onClicked: page.newGame()
-        }
-        MenuItem {
-            text: qsTr("About")
-            onClicked: pageStack.push(Qt.resolvedUrl("AboutPage.qml"))
-        }
-    }
+
 }
