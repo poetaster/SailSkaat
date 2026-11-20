@@ -24,8 +24,8 @@ BuildRequires:  pkgconfig(Qt5Quick)
 BuildRequires:  desktop-file-utils
 
 %description
-Three player Skaat. You Vs. two bots. Native QML game with the Skat rules
-engine from https://github.com/nikku/skaat embedded as a QML JavaScript library.
+Three player Skaat. You Vs. two bots. Native QML game
+
 
 %if "%{?vendor}" == "chum"
 PackageName: SailSkaat
@@ -38,9 +38,9 @@ Custom:
  - Repo: https://github.com/poetaster/SailSkaat
 Icon: https://raw.githubusercontent.com/poetaster/SailSkaat/main/icons/172x172/harbour-sailskaat.png
 Screenshots:
- - https://raw.githubusercontent.com/poetaster/SailSkaat/main/Screenshot_20260331_175049_001.png
- - https://raw.githubusercontent.com/poetaster/SailSkaat/main/Screenshot_20260331_175044_001.png
- - https://raw.githubusercontent.com/poetaster/SailSkaat/main/Screenshot_20260331_175010_001.png
+ - https://raw.githubusercontent.com/poetaster/SailSkaat/main/screen-1.png
+ - https://raw.githubusercontent.com/poetaster/SailSkaat/main/screen-2.png
+ - https://raw.githubusercontent.com/poetaster/SailSkaat/main/screen-3.png
 Url:
   Homepage: https://github.com/poetaster/SailSkaat
   Bugtracker: https://github.com/poetaster/SailSkaat/issues
