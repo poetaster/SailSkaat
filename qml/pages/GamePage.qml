@@ -1,14 +1,11 @@
 import QtQuick 2.6
-
 import Sailfish.Silica 1.0
+
 import "../js/skaat.js" as Skaat
 import "../cards"
 import "../cards/cards.js" as Cards
 import "../components"
 
-// The Skat table. The game engine is plain JavaScript (qml/js/skaat.js);
-// this page mirrors its state into QML bindings, drives the bots with a
-// timer, and maps the card names to the sailfish-cards id space.
 
 Page {
     id: page
@@ -51,9 +48,7 @@ Page {
     // Table sizing.
     readonly property real margin: Theme.horizontalPageMargin
     readonly property real pad: Theme.paddingMedium
-    // Layout is sized off the largest hand dealt this game (not the live
-    // hand size), so cards keep a constant size as the hand shrinks during
-    // play. The live handCount is still used to centre the fan.
+    // live handCount is  used to centre the fan.
     readonly property int handCount: Math.max(1, page.hand.length)
     property int maxHand: 1
     readonly property real spread: 0.5
@@ -68,8 +63,7 @@ Page {
     readonly property bool allPass: page.step === "ask-declare" && page.actor === null
     readonly property bool playing: page.declaredGame !== null
 
-    // Skat is laid face up once someone has declared; until then it waits
-    // in its slot face down, the way a real table keeps it.
+    // Skat is laid face up once someone has declared;
     readonly property bool skatRevealed: page.declaredGame !== null
 
     function playerName(p) {
@@ -186,6 +180,7 @@ Page {
         page.declaredGame = null
         page.declarer = -1
         page.lastGameText = ""
+        page.matchScore = [0, 0, 0]
         page.bots = [null, new Skaat.Automa(), new Skaat.Automa()]
         page.engine = new Skaat.Game()
         page.advance("start")
@@ -218,8 +213,7 @@ Page {
         page.scheduleBots()
     }
 
-    // A stable key for a trick (the list of cards it holds), so we can tell
-    // when a new trick has completed as opposed to the same one re-read.
+    // keep track of the trick TO DO
     function trickKey(trick) {
         if (!trick)
             return ""
@@ -229,8 +223,7 @@ Page {
         return out.join(",")
     }
 
-    // Display order for the human's hand: jacks first, then the rest; each
-    // group ordered by suit (clubs, diamonds, hearts, spades).
+    // sort, jacks then ordered by suit (clubs, diamonds, hearts, spades).
     function sortedHand(cards) {
         var order = { '♣': 0, '♦': 1, '♥': 2, '♠': 3 }
         function key(c) {
@@ -259,9 +252,7 @@ Page {
             page.maxHand = m
         page.skat = st.skat ? st.skat.slice() : []
         page.trick = st.currentTrick ? st.currentTrick.slice() : []
-        // A trick just completed when the in-progress trick is empty but a new
-        // lastTrick has appeared. Hold that finished trick on the table for a
-        // short settle period so all three of its cards are visible.
+        // hold last trick so all three of its cards are visible.
         var key = page.trickKey(st.lastTrick)
         if (key !== page.lastTrickKey) {
             page.lastTrick = st.lastTrick ? st.lastTrick.slice() : null
@@ -317,6 +308,7 @@ Page {
             .arg(text.join(", "))
     }
 
+    // the bots take turns bidding with fixed semi random intervals
     function scheduleBots() {
         var botSteps = { "ask-bid": 1, "ask-ack": 1, "ask-declare": 1, "ask-skat": 1, "ask-card": 1 }
         if (page.actor !== null && page.actor > 0 && botSteps[page.step] && page.engine) {
@@ -333,7 +325,7 @@ Page {
         return Skaat.Util.isValidTrickCard(card, page.trick, page.hand, page.declaredGame.suit)
     }
 
-    // Card placements, built in JS:
+    // Card placements
     function botPlace(player, index) {
         var n = page.hands[player].length
         var i = (player === 1) ? index : (n - 1 - index)
@@ -355,10 +347,7 @@ Page {
         return { "x": x0 + index * page.cardWidth * page.spread, "y": 0, "z": index, "down": false }
     }
 
-    // ------------------------------------------------------------------
-    // Human actions.
-    // ------------------------------------------------------------------
-
+    // Human player actions.
     function doBid(value) { page.advance("bid", 0, value) }
     function doPass() { page.advance("pass", 0) }
     function doAck() { page.advance("ack", 0) }
@@ -742,9 +731,7 @@ Page {
                     model: page.hand.length
                     TableCard {
                         readonly property string cardName: (index < page.hand.length) ? page.hand[index] : ""
-                        // cardName can be undefined for one frame while the hand
-                        // shrinks and an out-of-range index is still bound; keep
-                        // toCardId away from it (it would throw on charAt).
+                        // cardName can be undefined for one frame while the hand shrinks
                         readonly property int cid: (cardName && cardName.length >= 2) ? Skaat.toCardId(cardName) : -1
                         place: page.handPlace(index)
                         cardId: cid
@@ -775,7 +762,7 @@ Page {
         }
     }
 
-    // Bots move at their own pace, not ours.
+    // Bots move at this pace.
     Timer {
         id: botTimer
         interval: 700
@@ -798,7 +785,7 @@ Page {
     // can be seen before the next trick begins.
     Timer {
         id: settleTimer
-        interval: 2800
+        interval: 2000
         repeat: false
         onTriggered: page.settling = false
     }

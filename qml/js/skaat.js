@@ -736,7 +736,7 @@ function calculateNullResults(players, state) {
 
   var result = state.result || {};
 
-  var outcome = result.outcome || playerTricks[player].length === 0 ? Win : Loss;
+  var outcome = result.outcome || (playerTricks[player].length === 0 ? Win : Loss);
 
   var modifierMap = {}
   modifierMap[0] = 23
