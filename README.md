@@ -1,2 +1,2 @@
 # SailSkaat
-A simple webview around https://github.com/nikku/skaat-app
+A qml Skat game for SailfishOS. https://en.wikipedia.org/wiki/Skat_(card_game)
