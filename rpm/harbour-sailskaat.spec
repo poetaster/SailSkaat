@@ -9,7 +9,7 @@ Name:       harbour-sailskaat
 %{?qtc_builddir:%define _builddir %qtc_builddir}
 
 Summary:    Skaat Game
-Version:    0.3.0
+Version:    0.2.0
 Release:    1
 License:    GPLv3
 BuildArch:  noarch
