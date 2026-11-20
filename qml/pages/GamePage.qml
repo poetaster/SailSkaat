@@ -303,7 +303,7 @@ Page {
     function scoreGame() {
         var s = page.matchScore.slice()
         var pts = page.result.points || []
-        var text = []
+        var declDelta = 0
         for (var i = 0; i < 3; ++i) {
             // result.points[i] holds that player's [label, value] change
             // entries (e.g. [[ "points", -48 ]]); sum the numeric values.
@@ -321,15 +321,16 @@ Page {
                 }
             }
             s[i] += p
-            text.push(page.playerName(i) + " " + (p >= 0 ? "+" : "−") + Math.abs(p))
+            if (i === page.result.player)
+                declDelta = p
         }
         page.matchScore = s
         var who = (page.result.player === undefined) ? "" : page.playerName(page.result.player)
-        page.lastGameText = qsTr("%1 declared %2 and %3 — %4")
+        page.lastGameText = qsTr("%1 declared %2 and %3 %4")
             .arg(who)
             .arg(page.gameText())
             .arg(page.result.outcome === "win" ? qsTr("won") : qsTr("lost"))
-            .arg(text.join(", "))
+            .arg((declDelta >= 0 ? "+" : "−") + Math.abs(declDelta))
     }
 
     // the bots take turns bidding with fixed semi random intervals
