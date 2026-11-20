@@ -21,6 +21,7 @@ Page {
     property var hands: [[], [], []]
     property var skat: []
     property var trick: []
+    property var tricks: []
     property var result: null
     property var declaredGame: null
     property int declarer: -1
@@ -45,12 +46,15 @@ Page {
         ? page.trick
         : (page.settling ? (page.lastTrick || []) : [])
 
+    // Where every card sits (in root coordinates); see computePlaces().
+    readonly property var places: computePlaces()
+
     // Table sizing.
     readonly property real margin: Theme.horizontalPageMargin
     readonly property real pad: Theme.paddingMedium
-    // live handCount is  used to centre the fan.
-    readonly property int handCount: Math.max(1, page.hand.length)
-    property int maxHand: 1
+    // Sizing is for a full 10-card hand from the start, so the cards never
+    // change size mid-game (and the pack has its real size on first load).
+    property int maxHand: 10
     readonly property real spread: 0.5
     readonly property real cardWidth: Math.floor(
         (page.width - 2 * page.margin) / (1 + (Math.max(1, page.maxHand) - 1) * page.spread))
@@ -252,6 +256,7 @@ Page {
             page.maxHand = m
         page.skat = st.skat ? st.skat.slice() : []
         page.trick = st.currentTrick ? st.currentTrick.slice() : []
+        page.tricks = st.tricks ? st.tricks.slice() : []
         // hold last trick so all three of its cards are visible.
         var key = page.trickKey(st.lastTrick)
         if (key !== page.lastTrickKey) {
@@ -325,26 +330,62 @@ Page {
         return Skaat.Util.isValidTrickCard(card, page.trick, page.hand, page.declaredGame.suit)
     }
 
-    // Card placements
-    function botPlace(player, index) {
-        var n = page.hands[player].length
-        var i = (player === 1) ? index : (n - 1 - index)
-        return { "x": i * page.botCardW * 0.32, "y": 0, "z": 10 + player * 10 + index, "down": true }
-    }
+    // Card placement: where each of the 32 cards sits, in root coordinates.
+    // All the cards live in one persistent layer (cardLayer), so a card
+    // simply glides to wherever the game puts it, and PlayingCard flips it
+    // whenever its face changes along the way. Cards the engine has played
+    // (and no longer holds) lie face down in the discard pile, in play order.
+    function computePlaces() {
+        var cw = page.cardWidth
+        var ch = page.cardHeight
+        var w = page.width
+        var p = {}
+        var i, n, k
 
-    function skatPlace(index) {
-        return { "x": index * (page.cardWidth + page.pad), "y": 0, "z": 30 + index, "down": !page.skatRevealed }
-    }
+        // Base: the whole pack, waiting face down in the discard pile.
+        for (i = 0; i < Skaat.skatCardIds.length; ++i)
+            p[Skaat.skatCardIds[i]] = { x: page.margin, y: trickRow.y, z: 5,
+                    down: true, w: cw, h: ch, delay: 0, role: "pile" }
+        // Played cards fan out of that spot, in play order.
+        k = 0
+        for (i = 0; i < page.tricks.length; ++i) {
+            for (var j = 0; j < page.tricks[i].length; ++j) {
+                p[Skaat.toCardId(page.tricks[i][j][1])] = { x: page.margin + k * 2, y: trickRow.y + k * 2,
+                        z: 5 + k, down: true, w: cw, h: ch, delay: 0, role: "pile" }
+                ++k
+            }
+        }
 
-    function trickPlace(index) {
-        return { "x": root.width / 2 - page.cardWidth / 2 + index * page.cardWidth * 0.45,
-                 "y": index * page.cardHeight * 0.3,
-                 "z": 100 + index, "down": false }
-    }
+        // The bots' fans, face down.
+        n = page.hands[1].length
+        for (i = 0; i < n; ++i)
+            p[Skaat.toCardId(page.hands[1][i])] = { x: seat1.x + i * page.botCardW * 0.32, y: seat1.y,
+                    z: 10 + i, down: true, w: page.botCardW, h: page.botCardH, delay: 0, role: "bot" }
+        n = page.hands[2].length
+        for (i = 0; i < n; ++i)
+            p[Skaat.toCardId(page.hands[2][i])] = { x: seat2.x + (n - 1 - i) * page.botCardW * 0.32, y: seat2.y,
+                    z: 20 + i, down: true, w: page.botCardW, h: page.botCardH, delay: 0, role: "bot" }
 
-    function handPlace(index) {
-        var x0 = (page.width - page.cardWidth - (page.handCount - 1) * page.cardWidth * page.spread) / 2
-        return { "x": x0 + index * page.cardWidth * page.spread, "y": 0, "z": index, "down": false }
+        // The skat, face down until the game is declared.
+        n = page.skat.length
+        for (i = 0; i < n; ++i)
+            p[Skaat.toCardId(page.skat[i])] = { x: skatSlot.x + i * (cw + page.pad), y: skatRow.y,
+                    z: 30 + i, down: !page.skatRevealed, w: cw, h: ch, delay: i * 60, role: "skat" }
+
+        // The trick on the table, enlarged.
+        n = page.displayTrick.length
+        for (i = 0; i < n; ++i)
+            p[Skaat.toCardId(page.displayTrick[i][1])] = { x: w / 2 - cw * 0.65 + i * cw * 0.45,
+                    y: trickRow.y + i * ch * 0.3, z: 100 + i, down: false, delay: 0, role: "trick",
+                    w: cw * 1.3, h: ch * 1.3 }
+
+        // The human hand, centred; the stagger lets the deal cascade out.
+        n = page.hand.length
+        var x0 = (w - cw - (n - 1) * cw * page.spread) / 2
+        for (i = 0; i < n; ++i)
+            p[Skaat.toCardId(page.hand[i])] = { x: x0 + i * cw * page.spread, y: handRow.y,
+                    z: 50 + i, down: false, w: cw, h: ch, delay: i * 25, role: "hand" }
+        return p
     }
 
     // Human player actions.
@@ -426,17 +467,6 @@ Page {
                 width: page.botFanW + 10
                 height: root.botRowH
 
-                Repeater {
-                    model: page.hands[1].length
-                    TableCard {
-                        place: page.botPlace(1, index)
-                        cardId: -1
-                        faceDown: true
-                        width: page.botCardW
-                        height: page.botCardH
-                        enabled: false
-                    }
-                }
                 Label {
                     anchors.left: parent.left
                     anchors.bottom: parent.bottom
@@ -466,17 +496,6 @@ Page {
                 width: page.botFanW + 10
                 height: root.botRowH
 
-                Repeater {
-                    model: page.hands[2].length
-                    TableCard {
-                        place: page.botPlace(2, index)
-                        cardId: -1
-                        faceDown: true
-                        width: page.botCardW
-                        height: page.botCardH
-                        enabled: false
-                    }
-                }
                 Label {
                     anchors.right: parent.right
                     anchors.bottom: parent.bottom
@@ -516,19 +535,6 @@ Page {
                     //DashedSlot {
                     //    anchors.fill: parent
                     //}
-                    Repeater {
-                        model: 2
-                        TableCard {
-                            readonly property string cardName: page.skat[index]
-                            readonly property bool revealed: page.skatRevealed && cardName
-                            place: page.skatPlace(index)
-                            cardId: revealed ? Skaat.toCardId(cardName) : -1
-                            faceDown: !revealed
-                            width: page.cardWidth
-                            height: page.cardHeight
-                            enabled: false
-                        }
-                    }
                 }
             }
 
@@ -538,19 +544,6 @@ Page {
                 y: skatRow.y + skatRow.height + page.pad
                 width: parent.width
                 height: Math.round(page.cardHeight * 1.8)
-
-                Repeater {
-                    model: page.displayTrick.length
-                    TableCard {
-                        readonly property string cardName: page.displayTrick[index][1]
-                        place: page.trickPlace(index)
-                        cardId: Skaat.toCardId(cardName)
-                        faceDown: false
-                        width: page.cardWidth * 1.3
-                        height: page.cardHeight * 1.3
-                        enabled: false
-                    }
-                }
             }
 
             // Status and actions.
@@ -721,30 +714,10 @@ Page {
             // The human hand.
             Item {
                 id: handRow
-                //y: statusBlock.y + statusBlock.height + page.pad
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: page.cardHeight /2
                 width: parent.width
                 height: page.cardHeight
-
-                Repeater {
-                    model: page.hand.length
-                    TableCard {
-                        readonly property string cardName: (index < page.hand.length) ? page.hand[index] : ""
-                        // cardName can be undefined for one frame while the hand shrinks
-                        readonly property int cid: (cardName && cardName.length >= 2) ? Skaat.toCardId(cardName) : -1
-                        place: page.handPlace(index)
-                        cardId: cid
-                        faceDown: false
-                        width: page.cardWidth
-                        height: page.cardHeight
-                        selected: page.selected.indexOf(cardName) >= 0
-                        dimmed: page.step === "ask-card" && page.actor === 0 && !page.cardValid(cardName)
-                        enabled: (page.step === "ask-skat" && page.actor === 0)
-                              || (page.step === "ask-card" && page.actor === 0 && page.cardValid(cardName))
-                        onClicked: page.onCardTapped(cardName)
-                    }
-                }
             }
 
             // The human's running total, mirroring the bot seats. Sits just
@@ -758,6 +731,32 @@ Page {
                 text: qsTr("You") + "  " + page.matchScore[0]
                 font.pixelSize: Theme.fontSizeSmall
                 color: Cards.playerColor(0)
+            }
+
+            // All 32 cards live here and glide to wherever the game puts
+            // them: the hand, the bots' fans, the skat, the table, or the
+            // discard pile. They flip over whenever their face changes.
+            Repeater {
+                id: cardLayer
+                model: Skaat.skatCardIds
+
+                TableCard {
+                    readonly property int cid: modelData
+                    readonly property string cardName: Skaat.fromCardId(cid)
+                    readonly property bool inHand: place.role === "hand"
+
+                    place: page.places[cid]
+                    cardId: cid
+                    width: place.w
+                    height: place.h
+                    selected: inHand && page.selected.indexOf(cardName) >= 0
+                    dimmed: inHand && page.step === "ask-card" && page.actor === 0
+                          && !page.cardValid(cardName)
+                    enabled: inHand && ((page.step === "ask-skat" && page.actor === 0)
+                                  || (page.step === "ask-card" && page.actor === 0
+                                      && page.cardValid(cardName)))
+                    onClicked: page.onCardTapped(cardName)
+                }
             }
         }
     }
