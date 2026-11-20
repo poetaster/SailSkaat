@@ -31,6 +31,7 @@ Page {
     property var selected: []
     property bool schneider: false
     property bool schwarz: false
+    property bool ouvert: false
     property string errorText: ""
     property string lastGameText: ""
 
@@ -108,6 +109,8 @@ Page {
         var m = page.declaredGame.modifiers || 0
         if (m & Skaat.Constants.Hand)
             text += " " + qsTr("Hand")
+        if (m & Skaat.Constants.Overt)
+            text += " " + qsTr("Ouvert")
         if (m & Skaat.Constants.Schwarz)
             text += " " + qsTr("Schwarz")
         else if (m & Skaat.Constants.Schneider)
@@ -131,8 +134,11 @@ Page {
             : (page.actor === null ? "" : page.playerName(page.actor) + " ")
         if (page.step === "ask-bid") {
             var cb = page.currentBidInfo()
-            if (page.actor === 0)
-                return (cb ? qsTr("Current bid ") + cb + ". " : "") + qsTr("Pass or bid higher.")
+            if (page.actor === 0) {
+                if (cb)
+                    return qsTr("Current bid ") + cb + ". " + qsTr("Pass or bid higher.")
+                return qsTr("Nobody has bid yet — open the bidding at 18, or pass.")
+            }
             return who + qsTr("is weighing the cards") + (cb ? " (" + cb + ")" : "") + "…"
         }
         if (page.step === "ask-ack")
@@ -184,6 +190,7 @@ Page {
         page.selected = []
         page.schneider = false
         page.schwarz = false
+        page.ouvert = false
         page.errorText = ""
         page.result = null
         page.trick = []
@@ -290,6 +297,7 @@ Page {
         page.selected = []
         page.schneider = false
         page.schwarz = false
+        page.ouvert = false
     }
 
     function scoreGame() {
@@ -330,7 +338,7 @@ Page {
         if (page.actor !== null && page.actor > 0 && botSteps[page.step] && page.engine) {
             botTimer.interval = (page.step === "ask-card")
                 ? 300 + Math.floor(Math.random() * 600)
-                : 1000 + Math.floor(Math.random() * 2000)
+                : 2000 + Math.floor(Math.random() * 2000)
             botTimer.restart()
         }
     }
@@ -413,6 +421,9 @@ Page {
             if (page.schwarz)
                 mods |= Skaat.Constants.Schwarz
         }
+        // Ouvert is legal for all game types (null-ouvert is a fixed value).
+        if (page.ouvert)
+            mods |= Skaat.Constants.Overt
         page.advance("declare", 0, { "suit": suit, "modifiers": mods })
     }
 
@@ -676,6 +687,10 @@ Page {
                                 onClicked: page.schwarz = !page.schwarz
                             }
                             MenuItem {
+                                text: (page.ouvert ? "✓ " : "") + qsTr("Ouvert")
+                                onClicked: page.ouvert = !page.ouvert
+                            }
+                            MenuItem {
                                 text: qsTr("Grand")
                                 onClicked: page.declare(Skaat.Constants.Grand)
                             }
@@ -793,6 +808,13 @@ Page {
         onTriggered: {
             if (!page.engine || page.actor === null || page.actor < 1)
                 return
+            // Let a just-completed trick stay on the table for the full
+            // settle window before the next card glides in.
+            if (page.settling) {
+                botTimer.interval = 250
+                botTimer.restart()
+                return
+            }
             var move
             try {
                 move = page.bots[page.actor].next(page.engine, page.step, page.actor)

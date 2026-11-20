@@ -795,7 +795,7 @@ function calculateSuitResults(players, state) {
 
   var outcome = result.outcome || (
     modifiers & Schwarz && tricksValue < 120 ? Loss : (
-      modifiers & Schneider && tricksValue <= 90 ? Loss : (
+      modifiers & Schneider && tricksValue < 90 ? Loss : (
         tricksValue <= 60 ? Loss : Win
       )
     )
@@ -810,7 +810,7 @@ function calculateSuitResults(players, state) {
     (modifiers & Schneider ? 1 : 0) +
     (modifiers & Schwarz ? 1 : 0) +
     (tricksValue === 120 ? 1 : 0) +
-    (tricksValue > 90 ? 1 : 0)
+    (tricksValue >= 90 ? 1 : 0)
   );
 
   var points = (
@@ -959,8 +959,10 @@ function Game(options, init) {
 
         var minBid = (bid ? bid : 18);
 
-        if (playerBid < minBid) {
-          throw new Error('expected bid >= ' + minBid + ', found ' + playerBid);
+        // A fresh bid must beat the current one strictly; the opening bid
+        // must be at least 18.
+        if (bid ? playerBid <= bid : playerBid < 18) {
+          throw new Error('expected bid ' + (bid ? '> ' + bid : '>= 18') + ', found ' + playerBid);
         }
 
         if (acknowledger) {
@@ -1148,6 +1150,12 @@ function Game(options, init) {
         }
 
         var gameModifiers = game.modifiers || 0;
+
+        // Ouvert implies Schwarz (rules: "Schwarz has to be announced in
+        // order to declare Ouvert"), and Schwarz implies Schneider.
+        if (declarationModifiers & Overt) {
+          declarationModifiers = declarationModifiers | (Schwarz | Schneider);
+        }
 
         // Schwarz implies Schneider
         if (declarationModifiers & Schwarz) {
@@ -1343,7 +1351,8 @@ function Game(options, init) {
 
 
 
-var BIDS = [ 18, 20, 22, 23, 24, 27, 30, 33, 35, 36, 40, 44, 46, 48, 50 ];
+var BIDS = [ 18, 20, 22, 23, 24, 27, 30, 33, 35, 36, 40, 44, 45, 46, 48, 50,
+             54, 55, 59, 60, 63, 66, 70, 72, 77, 80, 81, 84, 88, 90, 96, 99 ];
 
 /**
  * @type { Record<import('./types').Picture, number> }
@@ -1694,9 +1703,9 @@ var Skaat = {
   toCardId: toCardId,
   fromCardId: fromCardId,
   skatCardIds: skatCardIds,
-  /* bidding ladder offered to the human player */
-  BIDS: [18, 20, 22, 23, 24, 27, 30, 33, 35, 36, 40, 44, 46, 48, 50,
-         55, 57, 60, 65, 66, 70]
+  /* bidding ladder per rules.txt */
+  BIDS: [18, 20, 22, 23, 24, 27, 30, 33, 35, 36, 40, 44, 45, 46, 48, 50,
+         54, 55, 59, 60, 63, 66, 70, 72, 77, 80, 81, 84, 88, 90, 96, 99]
 }
 
 /* ================================ self test ============================== */
@@ -1814,7 +1823,8 @@ function _playForcedGame(suit, modifiers, handGame) {
     var step = result[0]
     var player = result[1]
     if (step === 'ask-bid') {
-      result = game.next('bid', player, 18)
+      var current = game.state.bidding.bid || 0;
+      result = game.next('bid', player, increaseBid(current, BIDS))
     } else if (step === 'ask-ack') {
       result = game.next('pass', player)
     } else {
